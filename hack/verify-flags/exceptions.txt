@@ -1,3 +1,5 @@
+custom-metrics-stackdriver-adapter/README.md:         - my-app --pod_id=$(POD_ID)
+custom-metrics-stackdriver-adapter/README.md:     - `pod_id` - set this to pod UID obtained via downward API. Example configuration that passes POD_ID to your application as a flag:
 custom-metrics-stackdriver-adapter/pkg/adapter/provider/translator.go:		name := series.Resource.Labels["pod_id"]
 custom-metrics-stackdriver-adapter/pkg/adapter/provider/translator.go:		return fmt.Sprintf("resource.label.pod_id = %s", podIDs[0])
 custom-metrics-stackdriver-adapter/pkg/adapter/provider/translator.go:	return "resource.label.pod_id != \"\" AND resource.label.pod_id != \"machine\""
