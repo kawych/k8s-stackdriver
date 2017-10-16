@@ -1,8 +1,8 @@
 ARCH?=amd64
 OUT_DIR?=build
 PACKAGE=github.com/GoogleCloudPlatform/k8s-stackdriver/custom-metrics-stackdriver-adapter
-PREFIX?=gcr.io/google-containers
-TAG = v0.2.0
+PREFIX?=gcr.io/kawych-test
+TAG = v0.2.1
 PKG := $(shell find pkg/* -type f)
 
 .PHONY: build docker push test clean
