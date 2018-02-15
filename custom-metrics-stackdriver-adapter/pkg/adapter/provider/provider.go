@@ -31,6 +31,7 @@ import (
 	"github.com/GoogleCloudPlatform/k8s-stackdriver/custom-metrics-stackdriver-adapter/pkg/provider"
 	"k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	"fmt"
 )
 
 // TODO(kawych):
@@ -59,7 +60,7 @@ type StackdriverProvider struct {
 }
 
 // NewStackdriverProvider creates a StackdriverProvider
-func NewStackdriverProvider(kubeClient *corev1.CoreV1Client, mapper apimeta.RESTMapper, stackdriverService *stackdriver.Service, rateInterval time.Duration) provider.CustomMetricsProvider {
+func NewStackdriverProvider(kubeClient *corev1.CoreV1Client, mapper apimeta.RESTMapper, stackdriverService *stackdriver.Service, rateInterval time.Duration) provider.MetricsProvider {
 	gceConf, err := config.GetGceConfig("custom.googleapis.com")
 	if err != nil {
 		glog.Fatalf("Failed to retrieve GCE config: %v", err)
@@ -138,7 +139,7 @@ func (p *StackdriverProvider) GetNamespacedMetricBySelector(groupResource schema
 
 // ListAllMetrics returns all custom metrics available from Stackdriver.
 // List only pod metrics
-func (p *StackdriverProvider) ListAllMetrics() []provider.MetricInfo {
+func (p *StackdriverProvider) ListAllCustomMetrics() []provider.MetricInfo {
 	metrics := []provider.MetricInfo{}
 	stackdriverRequest := p.translator.ListMetricDescriptors()
 	response, err := stackdriverRequest.Do()
@@ -147,6 +148,15 @@ func (p *StackdriverProvider) ListAllMetrics() []provider.MetricInfo {
 		return metrics
 	}
 	return p.translator.GetMetricsFromSDDescriptorsResp(response)
+}
+
+func (p *StackdriverProvider) GetExternalMetric(namespace string, metricName string, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
+	return nil, provider.NewOperationNotSupportedError(fmt.Sprintf("GetExternal metric '%s' with selector '%s' in namespace '%s'", metricName, metricSelector, namespace))
+}
+
+func (p *StackdriverProvider) ListAllExternalMetrics() []provider.MetricInfo {
+	glog.Infof("Called 'ListAllExternalMetrics'")
+	return []provider.MetricInfo{}
 }
 
 func min(a, b int) int {

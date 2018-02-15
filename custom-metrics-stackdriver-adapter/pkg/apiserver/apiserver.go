@@ -27,7 +27,8 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
 	"github.com/GoogleCloudPlatform/k8s-stackdriver/custom-metrics-stackdriver-adapter/pkg/provider"
-	"k8s.io/metrics/pkg/apis/custom_metrics/install"
+	cm_install "k8s.io/metrics/pkg/apis/custom_metrics/install"
+	em_install "k8s.io/metrics/pkg/apis/external_metrics/install"
 )
 
 var (
@@ -40,7 +41,8 @@ var (
 )
 
 func init() {
-	install.Install(groupFactoryRegistry, registry, Scheme)
+	cm_install.Install(groupFactoryRegistry, registry, Scheme)
+	em_install.Install(groupFactoryRegistry, registry, Scheme)
 
 	// we need to add the options to empty v1
 	// TODO fix the server code to avoid this
@@ -65,7 +67,7 @@ type Config struct {
 // CustomMetricsAdapterServer contains state for a Kubernetes cluster master/api server.
 type CustomMetricsAdapterServer struct {
 	GenericAPIServer *genericapiserver.GenericAPIServer
-	Provider         provider.CustomMetricsProvider
+	Provider         provider.MetricsProvider
 }
 
 type completedConfig struct {
@@ -85,7 +87,7 @@ func (cfg *Config) Complete() *completedConfig {
 }
 
 // New returns a new instance of CustomMetricsAdapterServer from the given config.
-func (c completedConfig) New(cmProvider provider.CustomMetricsProvider) (*CustomMetricsAdapterServer, error) {
+func (c completedConfig) New(metricsProvider provider.MetricsProvider) (*CustomMetricsAdapterServer, error) {
 	genericServer, err := c.GenericConfig.New("custom-metrics-stackdriver-adapter", genericapiserver.EmptyDelegate)
 	if err != nil {
 		return nil, err
@@ -93,10 +95,13 @@ func (c completedConfig) New(cmProvider provider.CustomMetricsProvider) (*Custom
 
 	s := &CustomMetricsAdapterServer{
 		GenericAPIServer: genericServer,
-		Provider:         cmProvider,
+		Provider:         metricsProvider,
 	}
 
 	if err := s.InstallCustomMetricsAPI(); err != nil {
+		return nil, err
+	}
+	if err := s.InstallExternalMetricsAPI(); err != nil {
 		return nil, err
 	}
 

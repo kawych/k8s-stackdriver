@@ -25,8 +25,12 @@ type customMetricsResourceLister struct {
 	provider CustomMetricsProvider
 }
 
-// NewResourceLister creates APIResourceLister for provided CustomMetricsProvider.
-func NewResourceLister(provider CustomMetricsProvider) discovery.APIResourceLister {
+type externalMetricsResourceLister struct {
+	provider ExternalMetricsProvider
+}
+
+// NewCustomMetricResourceLister creates APIResourceLister for provided CustomMetricsProvider.
+func NewCustomMetricResourceLister(provider CustomMetricsProvider) discovery.APIResourceLister {
 	return &customMetricsResourceLister{
 		provider: provider,
 	}
@@ -34,7 +38,7 @@ func NewResourceLister(provider CustomMetricsProvider) discovery.APIResourceList
 
 // ListAPIResources lists all supported custom metrics.
 func (l *customMetricsResourceLister) ListAPIResources() []metav1.APIResource {
-	metrics := l.provider.ListAllMetrics()
+	metrics := l.provider.ListAllCustomMetrics()
 	resources := make([]metav1.APIResource, len(metrics))
 
 	for i, metric := range metrics {
@@ -43,6 +47,30 @@ func (l *customMetricsResourceLister) ListAPIResources() []metav1.APIResource {
 			Namespaced: metric.Namespaced,
 			Kind:       "MetricValueList",
 			Verbs:      metav1.Verbs{"get"}, // TODO: support "watch"
+		}
+	}
+
+	return resources
+}
+
+// NewExternalMetricResourceLister creates APIResourceLister for provided CustomMetricsProvider.
+func NewExternalMetricResourceLister(provider ExternalMetricsProvider) discovery.APIResourceLister {
+	return &externalMetricsResourceLister{
+		provider: provider,
+	}
+}
+
+// ListAPIResources lists all supported custom metrics.
+func (l *externalMetricsResourceLister) ListAPIResources() []metav1.APIResource {
+	metrics := l.provider.ListAllExternalMetrics()
+	resources := make([]metav1.APIResource, len(metrics))
+
+	for i, metric := range metrics {
+		resources[i] = metav1.APIResource{
+			Name:       metric.GroupResource.String() + "/" + metric.Metric,
+			Namespaced: metric.Namespaced,
+			Kind:       "MetricValueList",
+			Verbs:      metav1.Verbs{"get"},
 		}
 	}
 

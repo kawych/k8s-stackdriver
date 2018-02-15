@@ -92,5 +92,16 @@ type CustomMetricsProvider interface {
 	// the current time.  Note that this is not allowed to return
 	// an error, so it is reccomended that implementors cache and
 	// periodically update this list, instead of querying every time.
-	ListAllMetrics() []MetricInfo
+	ListAllCustomMetrics() []MetricInfo
+}
+
+type ExternalMetricsProvider interface {
+	GetExternalMetric(namespace string, metricName string, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error)
+
+	ListAllExternalMetrics() []MetricInfo
+}
+
+type MetricsProvider interface {
+	CustomMetricsProvider
+	ExternalMetricsProvider
 }

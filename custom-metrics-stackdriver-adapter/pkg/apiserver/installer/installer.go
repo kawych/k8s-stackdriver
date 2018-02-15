@@ -40,6 +40,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/k8s-stackdriver/custom-metrics-stackdriver-adapter/pkg/provider"
 	"github.com/emicklei/go-restful"
+	"github.com/golang/glog"
 )
 
 // NB: the contents of this file should mostly be a subset of the functionality
@@ -55,6 +56,7 @@ import (
 // the only verb accepted is GET (and perhaps WATCH in the future).
 type MetricsAPIGroupVersion struct {
 	DynamicStorage rest.Storage
+	//EMDynamicStorage rest.Storage
 
 	*endpoints.APIGroupVersion
 }
@@ -62,19 +64,42 @@ type MetricsAPIGroupVersion struct {
 // InstallREST registers the dynamic REST handlers into a restful Container.
 // It is expected that the provided path root prefix will serve all operations.  Root MUST
 // NOT end in a slash.  It should mirror InstallREST in the plain APIGroupVersion.
-func (g *MetricsAPIGroupVersion) InstallREST(container *restful.Container, cmProvider provider.CustomMetricsProvider, requestContextMapper request.RequestContextMapper) error {
+func (g *MetricsAPIGroupVersion) InstallCMREST(container *restful.Container, metricsProvider provider.MetricsProvider, requestContextMapper request.RequestContextMapper) error {
+	glog.Infof("Install REST!")
 	installer := g.newDynamicInstaller()
-	ws := installer.NewWebService()
 
-	registrationErrors := installer.Install(ws)
-	lister := provider.NewResourceLister(cmProvider)
-	if lister == nil {
-		return fmt.Errorf("must provide a dynamic lister for dynamic API groups")
+	glog.Infof("Install CM API")
+	// INSTALL CUSTOM METRICS API
+	cmWs := installer.NewWebService()
+	cmRegistrationErrors := installer.Install(cmWs)
+	cmLister := provider.NewCustomMetricResourceLister(metricsProvider)
+	if cmLister == nil {
+		return fmt.Errorf("must provide a dynamic lister for dynamic API group custom.metrics.io")
 	}
-	versionDiscoveryHandler := discovery.NewAPIVersionHandler(g.Serializer, g.GroupVersion, lister, requestContextMapper)
-	versionDiscoveryHandler.AddToWebService(ws)
-	container.Add(ws)
-	return utilerrors.NewAggregate(registrationErrors)
+	cmVersionDiscoveryHandler := discovery.NewAPIVersionHandler(g.Serializer, g.GroupVersion, cmLister, requestContextMapper)
+	cmVersionDiscoveryHandler.AddToWebService(cmWs)
+	container.Add(cmWs)
+
+	return utilerrors.NewAggregate(cmRegistrationErrors)
+}
+
+func (g *MetricsAPIGroupVersion) InstallEMREST(container *restful.Container, metricsProvider provider.MetricsProvider, requestContextMapper request.RequestContextMapper) error {
+	glog.Infof("Install REST!")
+	installer := g.newDynamicInstaller()
+
+	glog.Infof("Install EM API")
+	// INSTALL EXTERNAL METRICS API
+	emWs := installer.NewWebService()
+	emRegistrationErrors := installer.Install(emWs)
+	emLister := provider.NewExternalMetricResourceLister(metricsProvider)
+	if emLister == nil {
+		return fmt.Errorf("must provide a dynamic lister for dynamic API group external.metrics.io")
+	}
+	emVersionDiscoveryHandler := discovery.NewAPIVersionHandler(g.Serializer, g.GroupVersion, emLister, requestContextMapper)
+	emVersionDiscoveryHandler.AddToWebService(emWs)
+	container.Add(emWs)
+
+	return utilerrors.NewAggregate(emRegistrationErrors)
 }
 
 // newDynamicInstaller is a helper to create the installer.  It mirrors
@@ -107,9 +132,9 @@ type MetricsAPIInstaller struct {
 func (a *MetricsAPIInstaller) Install(ws *restful.WebService) (errors []error) {
 	errors = make([]error, 0)
 
-	err := a.registerResourceHandlers(a.group.DynamicStorage, ws)
+	err := a.registerEMResourceHandlers(a.group.DynamicStorage, ws)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("error in registering custom metrics resource: %v", err))
+		errors = append(errors, fmt.Errorf("error in registering external metrics resource: %v", err))
 	}
 
 	return errors
@@ -132,10 +157,121 @@ func (a *MetricsAPIInstaller) NewWebService() *restful.WebService {
 	return ws
 }
 
+// registerEMResourceHandlers registers the resource handlers for external metrics.
+// Compared to the normal installer, this plays fast and loose a bit, but should still
+// follow the API conventions.
+func (a *MetricsAPIInstaller) registerEMResourceHandlers(storage rest.Storage, ws *restful.WebService) error {
+	context := a.group.Context
+
+	optionsExternalVersion := a.group.GroupVersion
+	if a.group.OptionsExternalVersion != nil {
+		optionsExternalVersion = *a.group.OptionsExternalVersion
+	}
+
+	mapping, err := a.restMapping()
+	if err != nil {
+		return err
+	}
+
+	fqKindToRegister, err := a.getResourceKind(storage)
+	if err != nil {
+		return err
+	}
+
+	kind := fqKindToRegister.Kind
+
+	lister := storage.(rest.Lister)
+	list := lister.NewList()
+	listGVKs, _, err := a.group.Typer.ObjectKinds(list)
+	if err != nil {
+		return err
+	}
+	versionedListPtr, err := a.group.Creater.New(a.group.GroupVersion.WithKind(listGVKs[0].Kind))
+	if err != nil {
+		return err
+	}
+	versionedList := indirectArbitraryPointer(versionedListPtr)
+
+	versionedListOptions, err := a.group.Creater.New(optionsExternalVersion.WithKind("ListOptions"))
+	if err != nil {
+		return err
+	}
+
+	ctxFn := func(req *http.Request) request.Context {
+		if ctx, ok := context.Get(req); ok {
+			return request.WithUserAgent(ctx, req.Header.Get("User-Agent"))
+		}
+		return request.WithUserAgent(request.NewContext(), req.Header.Get("User-Agent"))
+	}
+
+	scope := mapping.Scope
+	namespaceParam := ws.PathParameter(scope.ArgumentName(), scope.ParamDescription()).DataType("string")
+	nameParam := ws.PathParameter("name", "name of the described resource").DataType("string")
+
+	externalMetricParams := []*restful.Parameter{
+		namespaceParam,
+		nameParam,
+	}
+	externalMetricPath := scope.ParamName() + "/{" + scope.ArgumentName() + "}/externalMetric/{name}"
+
+	mediaTypes, streamMediaTypes := negotiation.MediaTypesForSerializer(a.group.Serializer)
+	allMediaTypes := append(mediaTypes, streamMediaTypes...)
+	ws.Produces(allMediaTypes...)
+
+	reqScope := handlers.RequestScope{
+		ContextFunc:     ctxFn,
+		Serializer:      a.group.Serializer,
+		ParameterCodec:  a.group.ParameterCodec,
+		Creater:         a.group.Creater,
+		Convertor:       a.group.Convertor,
+		Copier:          a.group.Copier,
+		Typer:           a.group.Typer,
+		UnsafeConvertor: a.group.UnsafeConvertor,
+
+		// TODO: This seems wrong for cross-group subresources. It makes an assumption that a subresource and its parent are in the same group version. Revisit this.
+		Resource:    a.group.GroupVersion.WithResource("*"),
+		Subresource: "*",
+		Kind:        fqKindToRegister,
+
+		MetaGroupVersion: metav1.SchemeGroupVersion,
+	}
+	if a.group.MetaGroupVersion != nil {
+		reqScope.MetaGroupVersion = *a.group.MetaGroupVersion
+	}
+
+	// we need one path for namespaced resources, one for non-namespaced resources
+	doc := "list external metrics describing an object or objects"
+	reqScope.Namer = MetricsNaming{
+		handlers.ContextBasedNaming{
+			GetContext:         ctxFn,
+			SelfLinker:         a.group.Linker,
+			ClusterScoped:      false,
+			SelfLinkPathPrefix: gpath.Join(a.prefix, scope.ParamName()) + "/",
+		},
+	}
+
+	externalMetricHandler := metrics.InstrumentRouteFunc("LIST", "external-metrics", "", "", restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout))
+
+	externalMetricRoute := ws.GET(externalMetricPath).To(externalMetricHandler).
+		Doc(doc).
+		Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
+		Operation("list" + kind).
+		Produces(allMediaTypes...).
+		Returns(http.StatusOK, "OK", versionedList).
+		Writes(versionedList)
+	if err := addObjectParams(ws, externalMetricRoute, versionedListOptions); err != nil {
+		return err
+	}
+	addParams(externalMetricRoute, externalMetricParams)
+	ws.Route(externalMetricRoute)
+
+	return nil
+}
+
 // registerResourceHandlers registers the resource handlers for custom metrics.
 // Compared to the normal installer, this plays fast and loose a bit, but should still
 // follow the API conventions.
-func (a *MetricsAPIInstaller) registerResourceHandlers(storage rest.Storage, ws *restful.WebService) error {
+func (a *MetricsAPIInstaller) registerCMResourceHandlers(storage rest.Storage, ws *restful.WebService) error {
 	context := a.group.Context
 
 	optionsExternalVersion := a.group.GroupVersion

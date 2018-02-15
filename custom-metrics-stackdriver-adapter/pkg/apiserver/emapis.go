@@ -26,14 +26,14 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
 	specificapi "github.com/GoogleCloudPlatform/k8s-stackdriver/custom-metrics-stackdriver-adapter/pkg/apiserver/installer"
-	metricstorage "github.com/GoogleCloudPlatform/k8s-stackdriver/custom-metrics-stackdriver-adapter/pkg/registry/custom_metrics"
-	"k8s.io/metrics/pkg/apis/custom_metrics"
+	metricstorage "github.com/GoogleCloudPlatform/k8s-stackdriver/custom-metrics-stackdriver-adapter/pkg/registry/external_metrics"
+	"k8s.io/metrics/pkg/apis/external_metrics"
 )
 
 // InstallCustomMetricsAPI registers the api server in Kube Aggregator
-func (s *CustomMetricsAdapterServer) InstallCustomMetricsAPI() error {
+func (s *CustomMetricsAdapterServer) InstallExternalMetricsAPI() error {
 
-	groupMeta := registry.GroupOrDie(custom_metrics.GroupName)
+	groupMeta := registry.GroupOrDie(external_metrics.GroupName)
 
 	preferredVersionForDiscovery := metav1.GroupVersionForDiscovery{
 		GroupVersion: groupMeta.GroupVersion.String(),
@@ -49,9 +49,9 @@ func (s *CustomMetricsAdapterServer) InstallCustomMetricsAPI() error {
 		PreferredVersion: preferredVersionForDiscovery,
 	}
 
-	metricsAPI := s.cmAPI(groupMeta, &groupMeta.GroupVersion)
+	emAPI := s.emAPI(groupMeta, &groupMeta.GroupVersion)
 
-	if err := metricsAPI.InstallCMREST(s.GenericAPIServer.Handler.GoRestfulContainer, s.Provider, s.GenericAPIServer.RequestContextMapper()); err != nil {
+	if err := emAPI.InstallEMREST(s.GenericAPIServer.Handler.GoRestfulContainer, s.Provider, s.GenericAPIServer.RequestContextMapper()); err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func (s *CustomMetricsAdapterServer) InstallCustomMetricsAPI() error {
 
 	return nil
 }
-func (s *CustomMetricsAdapterServer) cmAPI(groupMeta *apimachinery.GroupMeta, groupVersion *schema.GroupVersion) *specificapi.MetricsAPIGroupVersion {
+func (s *CustomMetricsAdapterServer) emAPI(groupMeta *apimachinery.GroupMeta, groupVersion *schema.GroupVersion) *specificapi.MetricsAPIGroupVersion {
 	resourceStorage := metricstorage.NewREST(s.Provider)
 
 	return &specificapi.MetricsAPIGroupVersion{
