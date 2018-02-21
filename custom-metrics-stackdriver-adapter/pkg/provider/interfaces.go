@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/metrics/pkg/apis/custom_metrics"
+	"k8s.io/metrics/pkg/apis/external_metrics"
 )
 
 // MetricInfo describes a metric for a particular
@@ -96,7 +97,7 @@ type CustomMetricsProvider interface {
 }
 
 type ExternalMetricsProvider interface {
-	GetExternalMetric(namespace string, metricName string, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error)
+	GetExternalMetric(namespace string, metricName string, metricSelector labels.Selector) (*external_metrics.ExternalMetricValueList, error)
 
 	ListAllExternalMetrics() []MetricInfo
 }

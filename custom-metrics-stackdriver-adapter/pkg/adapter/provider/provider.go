@@ -26,12 +26,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/metrics/pkg/apis/custom_metrics"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/GoogleCloudPlatform/k8s-stackdriver/custom-metrics-stackdriver-adapter/pkg/config"
 	"github.com/GoogleCloudPlatform/k8s-stackdriver/custom-metrics-stackdriver-adapter/pkg/provider"
 	"k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
-	"fmt"
+	"k8s.io/metrics/pkg/apis/external_metrics"
 )
 
 // TODO(kawych):
@@ -150,8 +151,19 @@ func (p *StackdriverProvider) ListAllCustomMetrics() []provider.MetricInfo {
 	return p.translator.GetMetricsFromSDDescriptorsResp(response)
 }
 
-func (p *StackdriverProvider) GetExternalMetric(namespace string, metricName string, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
-	return nil, provider.NewOperationNotSupportedError(fmt.Sprintf("GetExternal metric '%s' with selector '%s' in namespace '%s'", metricName, metricSelector, namespace))
+func (p *StackdriverProvider) GetExternalMetric(namespace string, metricName string, metricSelector labels.Selector) (*external_metrics.ExternalMetricValueList, error) {
+	return &external_metrics.ExternalMetricValueList{
+		Items: []external_metrics.ExternalMetricValue{
+			{
+				Timestamp: metav1.NewTime(time.Now()),
+				MetricName: metricName,
+				MetricLabels: map[string]string{
+					"label": "value",
+				},
+				Value: *resource.NewQuantity(42, resource.DecimalSI),
+			},
+		},
+	}, nil
 }
 
 func (p *StackdriverProvider) ListAllExternalMetrics() []provider.MetricInfo {
