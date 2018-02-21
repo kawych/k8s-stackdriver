@@ -152,6 +152,7 @@ func (p *StackdriverProvider) ListAllCustomMetrics() []provider.MetricInfo {
 }
 
 func (p *StackdriverProvider) GetExternalMetric(namespace string, metricName string, metricSelector labels.Selector) (*external_metrics.ExternalMetricValueList, error) {
+	glog.Infof("Called 'GetExternalMetric', namespace %s, metric %s, selector %s", namespace, metricName, metricSelector)
 	return &external_metrics.ExternalMetricValueList{
 		Items: []external_metrics.ExternalMetricValue{
 			{

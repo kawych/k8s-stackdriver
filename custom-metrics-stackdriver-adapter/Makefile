@@ -1,7 +1,7 @@
 ARCH?=amd64
 OUT_DIR?=build
 PACKAGE=github.com/GoogleCloudPlatform/k8s-stackdriver/custom-metrics-stackdriver-adapter
-PREFIX?=gcr.io/google-containers
+PREFIX?=gcr.io/kawych-test
 TAG = v0.3.0
 PKG := $(shell find pkg/* -type f)
 

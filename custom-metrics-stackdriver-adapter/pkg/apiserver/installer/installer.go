@@ -604,6 +604,7 @@ func (n MetricsNaming) GenerateLink(requestInfo *request.RequestInfo, obj runtim
 
 func restfulListResource(r rest.Lister, rw rest.Watcher, scope handlers.RequestScope, forceWatch bool, minRequestTimeout time.Duration) restful.RouteFunction {
 	return func(req *restful.Request, res *restful.Response) {
+		glog.Infof("New http request, %s", req.Request.URL.Path)
 		handlers.ListResource(r, rw, scope, forceWatch, minRequestTimeout)(res.ResponseWriter, req.Request)
 	}
 }
