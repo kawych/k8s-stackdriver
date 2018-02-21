@@ -162,6 +162,14 @@ func (p *StackdriverProvider) GetExternalMetric(namespace string, metricName str
 				},
 				Value: *resource.NewQuantity(42, resource.DecimalSI),
 			},
+			{
+				Timestamp: metav1.NewTime(time.Now()),
+				MetricName: metricName,
+				MetricLabels: map[string]string{
+					"label": "value2",
+				},
+				Value: *resource.NewQuantity(43, resource.DecimalSI),
+			},
 		},
 	}, nil
 }
