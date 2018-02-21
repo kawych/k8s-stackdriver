@@ -46,10 +46,7 @@ func RegisterConversions(scheme *runtime.Scheme) error {
 func autoConvert_v1beta1_ExternalMetricValue_To_external_metrics_ExternalMetricValue(in *ExternalMetricValue, out *external_metrics.ExternalMetricValue, s conversion.Scope) error {
 	out.MetricName = in.MetricName
 	out.MetricLabels = *(*map[string]string)(unsafe.Pointer(&in.MetricLabels))
-	// TODO: Inefficient conversion - can we improve it?
-	if err := s.Convert(&in.Timestamp, &out.Timestamp, 0); err != nil {
-		return err
-	}
+	out.Timestamp = in.Timestamp
 	out.WindowSeconds = (*int64)(unsafe.Pointer(in.WindowSeconds))
 	out.Value = in.Value
 	return nil
@@ -63,10 +60,7 @@ func Convert_v1beta1_ExternalMetricValue_To_external_metrics_ExternalMetricValue
 func autoConvert_external_metrics_ExternalMetricValue_To_v1beta1_ExternalMetricValue(in *external_metrics.ExternalMetricValue, out *ExternalMetricValue, s conversion.Scope) error {
 	out.MetricName = in.MetricName
 	out.MetricLabels = *(*map[string]string)(unsafe.Pointer(&in.MetricLabels))
-	// TODO: Inefficient conversion - can we improve it?
-	if err := s.Convert(&in.Timestamp, &out.Timestamp, 0); err != nil {
-		return err
-	}
+	out.Timestamp = in.Timestamp
 	out.WindowSeconds = (*int64)(unsafe.Pointer(in.WindowSeconds))
 	out.Value = in.Value
 	return nil

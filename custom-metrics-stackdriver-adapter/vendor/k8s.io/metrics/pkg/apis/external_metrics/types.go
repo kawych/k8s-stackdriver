@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package external_metrics
 import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/api/unversioned"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -46,7 +45,7 @@ type ExternalMetricValue struct {
 	MetricLabels map[string]string `json:"metricLabels"`
 
 	// indicates the time at which the metrics were produced
-	Timestamp unversioned.Time `json:"timestamp"`
+	Timestamp metav1.Time `json:"timestamp"`
 
 	// indicates the window ([Timestamp-Window, Timestamp]) from
 	// which these metrics were calculated, when returning rate
