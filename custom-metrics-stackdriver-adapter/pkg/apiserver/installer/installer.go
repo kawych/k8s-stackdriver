@@ -212,7 +212,7 @@ func (a *MetricsAPIInstaller) registerEMResourceHandlers(storage rest.Storage, w
 		namespaceParam,
 		nameParam,
 	}
-	externalMetricPath := scope.ParamName() + "/{" + scope.ArgumentName() + "}/externalMetric/{name}"
+	externalMetricPath := scope.ParamName() + "/{" + scope.ArgumentName() + "}/external-metric/{name}"
 
 	mediaTypes, streamMediaTypes := negotiation.MediaTypesForSerializer(a.group.Serializer)
 	allMediaTypes := append(mediaTypes, streamMediaTypes...)
