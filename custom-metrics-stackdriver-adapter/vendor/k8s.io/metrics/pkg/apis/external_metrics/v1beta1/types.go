@@ -39,20 +39,20 @@ type ExternalMetricValue struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// the name of the metric
-	MetricName string `json:"metricName" protobuf:"bytes,2,name=metricName"`
+	MetricName string `json:"metricName" protobuf:"bytes,1,name=metricName"`
 
-	// labels set identifying the value within metric
-	MetricLabels map[string]string `json:"metricLabels"" protobuf:"bytes,3,name=metricLabels"`
+	// a set of labels that identify a single time series for the metric
+	MetricLabels map[string]string `json:"metricLabels" protobuf:"bytes,2,rep,name=metricLabels"`
 
-	// indicates the time at which the metrics were produced
-	Timestamp metav1.Time `json:"timestamp" protobuf:"bytes,4,name=timestamp"`
+	// the time at which the metrics were produced
+	Timestamp metav1.Time `json:"timestamp" protobuf:"bytes,3,name=timestamp"`
 
-	// indicates the window ([Timestamp-Window, Timestamp]) from
-	// which these metrics were calculated, when returning rate
+	// the window ([Timestamp-Window, Timestamp]) from which
+	// these metrics were calculated, when returning rate
 	// metrics calculated from cumulative metrics (or zero for
 	// non-calculated instantaneous metrics).
-	WindowSeconds *int64 `json:"window,omitempty" protobuf:"bytes,5,opt,name=window"`
+	WindowSeconds *int64 `json:"window,omitempty" protobuf:"bytes,4,opt,name=window"`
 
-	// the value of the metric for this
-	Value resource.Quantity `json:"value" protobuf:"bytes,6,name=value"`
+	// the value of the metric
+	Value resource.Quantity `json:"value" protobuf:"bytes,5,name=value"`
 }
