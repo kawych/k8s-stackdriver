@@ -53,11 +53,11 @@ message ExternalMetricValue {
   optional k8s.io.apimachinery.pkg.api.resource.Quantity value = 5;
 }
 
-// a list of values for a given metric for some set of objects
+// a list of values for a given metric for some set labels
 message ExternalMetricValueList {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
-  // the value of the metric across the described objects
+  // value of the metric matching a given set of labels
   repeated ExternalMetricValue items = 2;
 }
 

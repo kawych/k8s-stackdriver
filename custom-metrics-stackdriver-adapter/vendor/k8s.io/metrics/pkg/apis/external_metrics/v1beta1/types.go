@@ -23,12 +23,12 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// a list of values for a given metric for some set of objects
+// a list of values for a given metric for some set labels
 type ExternalMetricValueList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// the value of the metric across the described objects
+	// value of the metric matching a given set of labels
 	Items []ExternalMetricValue `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
