@@ -30,7 +30,9 @@ import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "v1beta1";
 
-// a metric value for some object
+// a metric value for external metric
+// A single metric value is identified by metric name and a set of string labels.
+// For one metric there can be multiple values with different sets of labels.
 message ExternalMetricValue {
   // the name of the metric
   optional string metricName = 1;
@@ -38,11 +40,11 @@ message ExternalMetricValue {
   // a set of labels that identify a single time series for the metric
   map<string, string> metricLabels = 2;
 
-  // the time at which the metrics were produced
+  // indicates the time at which the metrics were produced
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time timestamp = 3;
 
-  // the window ([Timestamp-Window, Timestamp]) from which
-  // these metrics were calculated, when returning rate
+  // indicates the window ([Timestamp-Window, Timestamp]) from
+  // which these metrics were calculated, when returning rate
   // metrics calculated from cumulative metrics (or zero for
   // non-calculated instantaneous metrics).
   optional int64 window = 4;

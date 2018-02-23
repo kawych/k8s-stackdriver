@@ -34,7 +34,9 @@ type ExternalMetricValueList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// a metric value for some object
+// a metric value for external metric
+// A single metric value is identified by metric name and a set of string labels.
+// For one metric there can be multiple values with different sets of labels.
 type ExternalMetricValue struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -44,11 +46,11 @@ type ExternalMetricValue struct {
 	// a set of labels that identify a single time series for the metric
 	MetricLabels map[string]string `json:"metricLabels" protobuf:"bytes,2,rep,name=metricLabels"`
 
-	// the time at which the metrics were produced
+	// indicates the time at which the metrics were produced
 	Timestamp metav1.Time `json:"timestamp" protobuf:"bytes,3,name=timestamp"`
 
-	// the window ([Timestamp-Window, Timestamp]) from which
-	// these metrics were calculated, when returning rate
+	// indicates the window ([Timestamp-Window, Timestamp]) from
+	// which these metrics were calculated, when returning rate
 	// metrics calculated from cumulative metrics (or zero for
 	// non-calculated instantaneous metrics).
 	WindowSeconds *int64 `json:"window,omitempty" protobuf:"bytes,4,opt,name=window"`
