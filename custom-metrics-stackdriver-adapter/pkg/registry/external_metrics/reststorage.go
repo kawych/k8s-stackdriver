@@ -72,7 +72,7 @@ func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.
 	if !ok {
 		return nil, fmt.Errorf("unable to get resource and metric name from request")
 	}
-	metricName := requestInfo.Name
+	metricName := requestInfo.Resource
 
 	return r.emProvider.GetExternalMetric(namespace, metricName, metricSelector)
 }
