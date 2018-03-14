@@ -38,8 +38,12 @@ import (
 func main() {
 	// Gather pod information
 	podId := flag.String("pod-id", "", "pod id")
+	namespace := flag.String("namespace", "", "namespace")
+	podName := flag.String("pod-name", "", "pod name")
 	metricName := flag.String("metric-name", "foo", "custom metric name")
 	metricValue := flag.Int64("metric-value", 0, "custom metric value")
+	useOldResourceModel := flag.Bool("use-old-resource-model", true, "use old stackdriver resource model")
+	useNewResourceModel := flag.Bool("use-new-resource-model", false, "use new stackdriver resource model")
 	flag.Parse()
 
 	if *podId == "" {
@@ -51,13 +55,24 @@ func main() {
 		log.Fatalf("Error getting Stackdriver service: %v", err)
 	}
 
-	labels := getResourceLabels(*podId)
+	oldModelLabels := getResourceLabelsForOldModel(*podId)
+	newModelLabels := getResourceLabelsForNewModel(*namespace, *podName)
 	for {
-		err := exportMetric(stackdriverService, *metricName, *metricValue, labels)
-		if err != nil {
-			log.Printf("Failed to write time series data: %v\n", err)
-		} else {
-			log.Printf("Finished writing time series with value: %v\n", metricValue)
+		if *useOldResourceModel {
+			err := exportMetric(stackdriverService, *metricName, *metricValue, "gke_container", oldModelLabels)
+			if err != nil {
+				log.Printf("Failed to write time series data for old resource model: %v\n", err)
+			} else {
+				log.Printf("Finished writing time series for new resource model with value: %v\n", metricValue)
+			}
+		}
+		if *useNewResourceModel {
+			err := exportMetric(stackdriverService, *metricName, *metricValue, "k8s_pod", newModelLabels)
+			if err != nil {
+				log.Printf("Failed to write time series data for new resource model: %v\n", err)
+			} else {
+				log.Printf("Finished writing time series for new resource model with value: %v\n", metricValue)
+			}
 		}
 		time.Sleep(5000 * time.Millisecond)
 	}
@@ -68,10 +83,10 @@ func getStackDriverService() (*monitoring.Service, error) {
 	return monitoring.New(oauthClient)
 }
 
-// getResourceLabels returns resource labels needed to correctly label metric data
+// getResourceLabelsForOldModel returns resource labels needed to correctly label metric data
 // exported to StackDriver. Labels contain details on the cluster (name, zone, project id)
 // and pod for which the metric is exported (id)
-func getResourceLabels(podId string) map[string]string {
+func getResourceLabelsForOldModel(podId string) map[string]string {
 	projectId, _ := gce.ProjectID()
 	zone, _ := gce.Zone()
 	clusterName, _ := gce.InstanceAttributeValue("cluster-name")
@@ -90,8 +105,23 @@ func getResourceLabels(podId string) map[string]string {
 	}
 }
 
+func getResourceLabelsForNewModel(namespace, name string) map[string]string {
+	projectId, _ := gce.ProjectID()
+	location, _ := gce.InstanceAttributeValue("cluster-location")
+	location = strings.TrimSpace(location)
+	clusterName, _ := gce.InstanceAttributeValue("cluster-name")
+	clusterName = strings.TrimSpace(clusterName)
+	return map[string]string{
+		"project_id":     projectId,
+		"location":       location,
+		"cluster_name":   clusterName,
+		"namespace_name": namespace,
+		"pod_name":       name,
+	}
+}
+
 func exportMetric(stackdriverService *monitoring.Service, metricName string,
-	metricValue int64, resourceLabels map[string]string) error {
+	metricValue int64, monitoredResource string, resourceLabels map[string]string) error {
 	dataPoint := &monitoring.Point{
 		Interval: &monitoring.TimeInterval{
 			EndTime: time.Now().Format(time.RFC3339),
@@ -108,7 +138,7 @@ func exportMetric(stackdriverService *monitoring.Service, metricName string,
 					Type: "custom.googleapis.com/" + metricName,
 				},
 				Resource: &monitoring.MonitoredResource{
-					Type:   "gke_container",
+					Type:   monitoredResource,
 					Labels: resourceLabels,
 				},
 				Points: []*monitoring.Point{

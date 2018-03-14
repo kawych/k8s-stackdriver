@@ -19,8 +19,9 @@ spec:
       - command:
         - /bin/sh
         - -c
-        - ./sd_dummy_exporter --metric-name=foo --metric-value=40 --pod-id=$(POD_ID)
-        image: gcr.io/google-containers/sd-dummy-exporter:v0.1.0
+        - ./sd_dummy_exporter --metric-name=foo --metric-value=40 --pod-id=$(POD_ID) --pod-name=$(POD_NAME) --namespace=default --use-new-resource-model
+        image: gcr.io/kawych-test/sd-dummy-exporter:v0.2.0
+        imagePullPolicy: Always
         name: sd-dummy-exporter
         resources:
           requests:
@@ -31,6 +32,11 @@ spec:
               fieldRef:
                 apiVersion: v1
                 fieldPath: metadata.uid
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
 ---
 apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
