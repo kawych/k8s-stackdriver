@@ -1,8 +1,8 @@
 # Custom Metrics - Stackdriver Adapter
 
 Custom Metrics - Stackdriver Adapter is an implementation of [Custom Metrics
-API] based on Stackdriver per-pod metrics. It's purpose is to enable pod
-autoscaling based on Stackdriver custom metrics.
+API] and [External Metrics API] based on Stackdriver metrics. Its purpose is
+to enable pod autoscaling based on Stackdriver custom metrics.
 
 ## Usage guide
 
@@ -45,14 +45,19 @@ them to scale your application, following [HPA walkthrough].
      - To set scopes in existing clusters you can use `gcloud beta compute
        instances set-scopes` command, see [gcloud
        documentation](https://cloud.google.com/sdk/gcloud/reference/beta/compute/instances/set-scopes).
+    * On GKE, you need cluster-admin permissions on your cluster. You can grant
+      your user account this permissions with following command:
+      ```
+      kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user $(gcloud config get-value account)
+      ```
 
 1. Start *Custom Metrics - Stackdriver Adapter*.
 
 ```sh
-kubectl create -f https://raw.githubusercontent.com/GoogleCloudPlatform/k8s-stackdriver/master/custom-metrics-stackdriver-adapter/adapter-beta.yaml
+kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/k8s-stackdriver/master/custom-metrics-stackdriver-adapter/deploy/production/adapter.yaml
 ```
 
-### Export metrics to Stackdriver
+### Export custom metrics to Stackdriver
 
 To learn how to create your custom metric and write your data to Stackdriver,
 follow [Stackdriver custom metrics documentation]. You can also follow
@@ -166,7 +171,16 @@ by a simple name, as defined in [custom metric naming rules].
      stackdriverService.Projects.TimeSeries.Create("projects/<your project ID>", request).Do()
      ```
 
-#### Examples
+### Export external metrics to Stackdriver
+
+For External Metrics, most of the above requirements for metrics don't apply.
+The metric doesn't have to be exported from Kubernetes cluster and attached to
+**gke_container** monitored resource. For example, you can use [existing metrics
+from other GCP services], as long as they satisfy requirements:
+  * `metricKind = GAUGE`
+  * `metricType = DOUBLE` or `INT64`
+
+### Examples
 
 To test your custom metrics setup or see a reference on how to push your metrics
 to Stackdriver, check out our examples:
@@ -177,6 +191,8 @@ to Stackdriver, check out our examples:
 
 [Custom Metrics API]:
 https://github.com/kubernetes/metrics/tree/master/pkg/apis/custom_metrics
+[External Metrics API]:
+https://github.com/kubernetes/metrics/tree/master/pkg/apis/external_metrics
 [HPA walkthrough]:
 https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/
 [cluster setup]: https://kubernetes.io/docs/setup/
@@ -200,3 +216,5 @@ https://cloud.google.com/monitoring/api/resources
 https://github.com/GoogleCloudPlatform/k8s-stackdriver/tree/master/prometheus-to-sd
 [Prometheus text format]:
 https://prometheus.io/docs/instrumenting/exposition_formats
+[existing metrics from other GCP services]:
+https://cloud.google.com/monitoring/api/metrics_gcp
